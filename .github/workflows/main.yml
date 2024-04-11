@@ -1,35 +1,56 @@
-name: GoImports Check
+name: GoImports and Unit Tests
 
 on:
   pull_request:
+    branches:
+      - main # 仅当 PR 目标是合入 main 分支时触发
     paths:
       - '**/*.go'
 
 jobs:
   check-goimports:
-    name: Check GoImports
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
+      - name: Check out code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # 这将获取所有历史记录
 
-    - name: Install goimports
-      run: go install golang.org/x/tools/cmd/goimports@latest
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: '1.21' # 或者您项目所使用的 Go 版本
 
-    - name: List all changed files
-      id: get-file
-      run: |
-        echo "FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep '.go$')" >> $GITHUB_ENV
+      - name: Install goimports
+        run: go install golang.org/x/tools/cmd/goimports@latest
 
-    - name: Check goimports
-      run: |
-        FILES=${FILES}
-        echo "Checking files: $FILES"
-        for FILE in $FILES; do
-          goimports -l $FILE
-          if [ $? -ne 0 ]; then
-            echo "::error file=$FILE::File does not conform to goimports style."
-            exit 1
+      - name: Check goimports
+        run: |
+          git fetch origin main:refs/remotes/origin/main 
+          FILES=$(git diff --name-only --diff-filter=d origin/main...HEAD | grep '\.go$')
+          if [ -n "$FILES" ]; then
+            goimports -l -d $FILES
+            if [ $(goimports -l $FILES | wc -l) -gt 0 ]; then
+              echo "goimports must be run on the following files:"
+              goimports -l $FILES
+              exit 1
+            fi
           fi
-        done
+
+  unit-tests:
+    name: Unit Tests
+    needs: check-goimports
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: '^1.21' # 选择适合你项目的 Go 版本
+
+      - name: Run Unit Tests
+        run: go test ./... -cover
