@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
@@ -22,6 +23,8 @@ func main() {
 
 	// 迁移schema
 	db.AutoMigrate(&Product{})
+
+	TestFunc()
 
 	// 创建
 	p := &Product{Code: "D42", Price: 100}
