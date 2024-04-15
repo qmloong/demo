@@ -1,0 +1,33 @@
+name: Close Related Issue
+
+on:
+  pull_request:
+    types: [closed]
+
+jobs:
+  close-issue:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.merged == true
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Extract issue number to close
+        id: extract
+        run: |
+          COMMENT=$(cat $GITHUB_EVENT_PATH | jq -r '.pull_request.body')
+          echo "Comment body: $COMMENT"
+          ISSUE_NUMBER=$(echo $COMMENT | grep -o '/close #\d\+' | grep -o '\d\+')
+          echo "::set-output name=issue::${ISSUE_NUMBER}"
+
+      - name: Close issue
+        if: steps.extract.outputs.issue
+        run: |
+          ISSUE_NUMBER=${{ steps.extract.outputs.issue }}
+          curl \
+            -X PATCH \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            -d '{"state": "closed"}' \
+            "https://api.github.com/repos/${{ github.repository }}/issues/${ISSUE_NUMBER}"
