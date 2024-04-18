@@ -2,6 +2,9 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"strings"
+	"text/tabwriter"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -34,4 +37,18 @@ func main() {
 	}
 
 	fmt.Println("Create success", p.ID)
+
+	writer := tabwriter.NewWriter(os.Stdout, 5, 2, 1, 'x', tabwriter.TabIndent)
+	if _, err := fmt.Fprintln(writer, strings.Join([]string{"A", "B", "C", "D"}, "\t")); err != nil {
+		fmt.Println("write table headers failed")
+		return
+	}
+
+	if _, err := fmt.Fprintln(writer, strings.Join([]string{"100", "2", "3", "400000"}, "\t")); err != nil {
+		fmt.Println("write table headers failed")
+		return
+	}
+
+	writer.Flush()
+
 }
